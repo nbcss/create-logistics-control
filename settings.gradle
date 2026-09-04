@@ -10,4 +10,6 @@ plugins {
     id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
 }
 
-rootProject.name = 'logisticscontrol'
+// Matches the repository/directory name. The published artifact is still `logisticscontrol` (base.archivesName in
+// build.gradle), which is the coordinate Create: Factory Controller bundles.
+rootProject.name = 'create_logistics_control'
