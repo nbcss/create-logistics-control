@@ -11,7 +11,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
@@ -29,7 +28,7 @@ import java.util.List;
 @EventBusSubscriber(modid = CreateLogisticsControl.MODID, value = Dist.CLIENT)
 public final class FilterLinkSelectionHandler {
     private static final List<BlockPos> currentSelection = new ArrayList<>();
-    private static ItemStack currentItem = ItemStack.EMPTY;
+    private static boolean wasHolding;
     private static final int OUTLINE_COLOR = 0xDDC166;
 
     private FilterLinkSelectionHandler() {}
@@ -43,7 +42,7 @@ public final class FilterLinkSelectionHandler {
         Level level = event.getLevel();
         if (!level.isClientSide) return;
         Player player = event.getEntity();
-        if (player == null || player.isSpectator() || !holdingLink(player)) return;
+        if (player.isSpectator() || !holdingLink(player)) return;
         BlockPos pos = event.getPos();
 
         if (level.getBlockEntity(pos) instanceof PackagerBlockEntity) return;
@@ -55,7 +54,7 @@ public final class FilterLinkSelectionHandler {
 
     @SubscribeEvent
     static void onLeftClick(PlayerInteractEvent.LeftClickBlock event) {
-        if (!event.getLevel().isClientSide || currentItem.isEmpty()) return;
+        if (!event.getLevel().isClientSide || !holdingLink(event.getEntity())) return;
         if (currentSelection.remove(event.getPos().immutable())) event.setCanceled(true);
     }
 
@@ -63,18 +62,14 @@ public final class FilterLinkSelectionHandler {
     static void onClientTick(ClientTickEvent.Post event) {
         Minecraft mc = Minecraft.getInstance();
         Player player = mc.player;
-        if (player == null) { reset(); return; }
-        if (holdingLink(player)) {
-            ItemStack held = player.getMainHandItem();
-            if (held != currentItem) {
-                currentSelection.clear();
-                currentItem = held;
-            }
+        boolean holding = holdingLink(player);
+        if (holding) {
+            if (!wasHolding) currentSelection.clear();   // fresh selection each time the link is taken out
             drawOutlines(mc.level);
-        } else {
-            reset();
+        } else if (player != null) {
             highlightWrenchedLink(mc, player);
         }
+        wasHolding = holding;
     }
 
     private static void highlightWrenchedLink(Minecraft mc, Player player) {
@@ -93,17 +88,12 @@ public final class FilterLinkSelectionHandler {
     public static void flush(BlockPos linkPos) {
         currentSelection.removeIf(p -> !p.closerThan(linkPos, FilterApplication.range()));
         PacketDistributor.sendToServer(new FilterLinkConfigurePacket(linkPos, new ArrayList<>(currentSelection)));
-        reset();
+        currentSelection.clear();
     }
 
     private static void toggle(BlockPos pos) {
         BlockPos immutable = pos.immutable();
         if (!currentSelection.remove(immutable)) currentSelection.add(immutable);
-    }
-
-    private static void reset() {
-        currentSelection.clear();
-        currentItem = ItemStack.EMPTY;
     }
 
     private static void drawOutlines(Level level) {
