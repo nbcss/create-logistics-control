@@ -43,8 +43,8 @@ public abstract class StockKeeperFilterMixin {
         List<ItemStack> nonCraftOutputs = new ArrayList<>();
         List<ItemStack> craftOutputs = new ArrayList<>();
         for (CraftableBigItemStack cbis : recipesToOrder) {
-            boolean canLabel = cbis.stack != null && !FluidCompat.isFluidFilter(cbis.stack)
-                && PackageFilter.canLabel(cbis.stack);
+            if (cbis.stack == null || cbis.stack.isEmpty() || FluidCompat.isFluidFilter(cbis.stack)) continue;
+            boolean canLabel = PackageFilter.canLabel(cbis.stack);
             if (cbis.recipe instanceof CraftingRecipe) {
                 craftOutputs.add(canLabel ? cbis.stack.copyWithCount(1) : ItemStack.EMPTY);
                 continue;
