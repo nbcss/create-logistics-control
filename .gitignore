@@ -1,28 +1,40 @@
 ### Gradle ###
 .gradle
-/build/
+build/
 !gradle/wrapper/gradle-wrapper.jar
-
-### Maven publish target (the publishing block writes here) ###
-/repo/
-
-### Minecraft Modding (standalone dev run) ###
-/run/
-**/src/generated/**/.cache/
+!**/src/**/build/
 
 ### IntelliJ IDEA ###
 .idea/
+*.iws
 *.iml
 *.ipr
-*.iws
 out/
+!**/src/**/out/
 
-### Eclipse / VS Code ###
+.run/
+
+### Eclipse ###
+.apt_generated
 .classpath
+.eclipse/
+.factorypath
 .project
-.settings/
-.vscode/
+.settings
+.springBeans
+.sts4-cache
 bin/
+!**/src/**/bin/
 
-### OS ###
+### VS Code ###
+.vscode/
+
+### Mac OS ###
 .DS_Store
+
+### Minecraft Modding ###
+run/
+!**/src/**/run/
+**/src/generated/**/.cache/
+repo/
+!**/src/**/repo/
