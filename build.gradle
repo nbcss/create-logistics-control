@@ -205,12 +205,7 @@ publishing {
     }
     repositories {
         maven {
-            name = "GitHubPackages"
-            url = "https://maven.pkg.github.com/nbcss/create-logistics-control"
-            credentials {
-                username = System.getenv("GITHUB_ACTOR")
-                password = System.getenv("GITHUB_TOKEN")
-            }
+            url = System.getenv("MAVEN_REPO_PATH")
         }
     }
 }
