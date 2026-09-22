@@ -12,7 +12,8 @@
     "PackagerFilterMixin",
     "MechanicalCrafterFilterMixin",
     "FactoryPanelBehaviourMixin",
-    "FluidRepackagerFilterMixin"
+    "FluidRepackagerFilterMixin",
+    "FluidPackageStampMixin"
   ],
   "client": [
     "StockKeeperFilterMixin"

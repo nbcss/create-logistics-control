@@ -14,6 +14,8 @@ public class ClcMixinPlugin implements IMixinConfigPlugin {
         "io.github.nbcss.logisticscontrol.mixin.GenericOrderRequestPacketMixin";
     private static final String FLUID_REPACKAGER_MIXIN =
         "io.github.nbcss.logisticscontrol.mixin.FluidRepackagerFilterMixin";
+    private static final String FLUID_PACKAGE_STAMP_MIXIN =
+        "io.github.nbcss.logisticscontrol.mixin.FluidPackageStampMixin";
 
     private static final boolean DEPLOYER_PRESENT = isModPresent("deployer");
     private static final boolean FLUIDLOGISTICS_PRESENT = isModPresent("fluidlogistics");
@@ -30,6 +32,7 @@ public class ClcMixinPlugin implements IMixinConfigPlugin {
     public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
         if (DEPLOYER_ORDER_PACKET_MIXIN.equals(mixinClassName)) return DEPLOYER_PRESENT;
         if (FLUID_REPACKAGER_MIXIN.equals(mixinClassName)) return FLUIDLOGISTICS_PRESENT;
+        if (FLUID_PACKAGE_STAMP_MIXIN.equals(mixinClassName)) return FLUIDLOGISTICS_PRESENT;
         return true;
     }
 
