@@ -6,6 +6,7 @@ import io.github.nbcss.logisticscontrol.content.compat.fluids.FluidCompat;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.CraftingInput;
+import net.minecraft.world.item.crafting.CraftingRecipe;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.Level;
 
@@ -15,11 +16,6 @@ import java.util.List;
 public final class RecipeFilters {
     private RecipeFilters() {}
 
-    /**
-     * Create's first-match output for a crafting {@code pattern} (regular before mechanical), matching
-     * {@link com.simibubi.create.content.kinetics.crafter.RecipeGridHandler#tryToApplyRecipe}. Only a best-effort guess
-     * for when an order carried no filter — a carried filter is kept verbatim upstream, never re-derived here.
-     */
     public static ItemStack craftingResult(List<BigItemStack> pattern, Level level) {
         CraftingInput input = buildInput(pattern);
         if (input == null) return ItemStack.EMPTY;
@@ -29,6 +25,12 @@ public final class RecipeFilters {
         if (result.isEmpty())
             result = AllRecipeTypes.MECHANICAL_CRAFTING.find(input, level).map(h -> h.value().assemble(input, registries)).orElse(ItemStack.EMPTY);
         return FluidCompat.isFluidFilter(result) || !PackageFilter.canLabel(result) ? ItemStack.EMPTY : result;
+    }
+
+    /** Whether a crafting {@code pattern} (the 3x3 grid Create's order code builds) satisfies {@code recipe}. */
+    public static boolean matches(CraftingRecipe recipe, List<BigItemStack> pattern, Level level) {
+        CraftingInput input = buildInput(pattern);
+        return input != null && recipe.matches(input, level);
     }
 
     private static CraftingInput buildInput(List<BigItemStack> pattern) {

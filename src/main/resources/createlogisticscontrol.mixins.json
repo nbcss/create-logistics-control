@@ -13,10 +13,14 @@
     "MechanicalCrafterFilterMixin",
     "FactoryPanelBehaviourMixin",
     "FluidRepackagerFilterMixin",
-    "FluidPackageStampMixin"
+    "FluidPackageStampMixin",
+    "PhantomTickerOrderMixin",
+    "CmpTickerOrderMixin"
   ],
   "client": [
-    "StockKeeperFilterMixin"
+    "StockKeeperFilterMixin",
+    "PhantomTickerFilterMixin",
+    "CmpTickerFilterMixin"
   ],
   "refmap": "createlogisticscontrol.refmap.json"
 }

@@ -52,6 +52,10 @@ repositories {
         url = "https://maven.liukrast.net"
     }
     maven {
+        name = "zznty (Create Factory Abstractions)"
+        url = "https://dl.zznty.ru/maven"
+    }
+    maven {
         name = "BlameJared (JEI)"
         url = "https://maven.blamejared.com"
     }
@@ -172,6 +176,9 @@ dependencies {
     // transitive = false to avoid Deployer's messy published dependency graph (create:slim / curse.maven).
     compileOnly("net.liukrast:deployer-1.21.1:${deployer_version}") { transitive = false }
     localRuntime("net.liukrast:deployer-1.21.1:${deployer_version}") { transitive = false }
+
+    // Create Factory Abstractions (soft): the generic order/stock layer of Create: Mobile Packages
+    compileOnly("ru.zznty:create_factory_abstractions-1.21.1:${create_factory_abstractions_version}") { transitive = false }
 
     // JEI (optional): compile against the API only; run the full mod on the standalone dev runtime for testing.
     compileOnly "mezz.jei:jei-1.21.1-neoforge-api:${jei_version}"
