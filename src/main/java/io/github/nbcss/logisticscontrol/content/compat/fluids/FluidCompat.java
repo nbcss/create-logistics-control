@@ -3,24 +3,73 @@ package io.github.nbcss.logisticscontrol.content.compat.fluids;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
+import net.neoforged.neoforge.fluids.FluidStack;
+import org.jetbrains.annotations.Nullable;
 
-import java.util.Set;
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
+import java.util.Map;
 
-/**
- * Minimal fluid-filter detection. A fluid represented as a virtual item (CreateFluidLogistics / CreateFluid) is not a
- * valid package-output filter — detected by item id so this mod needs no compile dependency on those addons. (Factory
- * Controller's full provider-based FluidCompat is duplicated down to just this check here; see the split design.)
- */
 public final class FluidCompat {
 
-    private static final Set<ResourceLocation> FLUID_FILTER_ITEMS = Set.of(
+    private static final Map<ResourceLocation, Reader> READERS = Map.of(
         ResourceLocation.fromNamespaceAndPath("fluidlogistics", "compressed_storage_tank"),
-        ResourceLocation.fromNamespaceAndPath("fluid", "fluid_manifest"));
+        new Reader("com.yision.fluidlogistics.item.CompressedTankItem", "getFluid"),
+        ResourceLocation.fromNamespaceAndPath("fluid", "fluid_manifest"),
+        new Reader("com.adonis.fluid.item.FluidManifestItem", "read"));
 
     private FluidCompat() {}
 
-    /** True when {@code stack} is a fluid-as-virtual-item filter from a supported fluid-logistics addon. */
-    public static boolean isFluidFilter(ItemStack stack) {
-        return !stack.isEmpty() && FLUID_FILTER_ITEMS.contains(BuiltInRegistries.ITEM.getKey(stack.getItem()));
+    public static boolean isVirtualFluid(ItemStack stack) {
+        return reader(stack) != null;
+    }
+
+    public static FluidStack virtualFluid(ItemStack stack) {
+        Reader reader = reader(stack);
+        return reader == null ? FluidStack.EMPTY : reader.read(stack);
+    }
+
+    @Nullable
+    private static Reader reader(ItemStack stack) {
+        return stack == null || stack.isEmpty() ? null : READERS.get(BuiltInRegistries.ITEM.getKey(stack.getItem()));
+    }
+
+    /** {@code static FluidStack <method>(ItemStack)} on an addon class, resolved on first use. */
+    private static final class Reader {
+        private final String className;
+        private final String methodName;
+        private volatile boolean resolved;
+        @Nullable private volatile MethodHandle handle;
+
+        Reader(String className, String methodName) {
+            this.className = className;
+            this.methodName = methodName;
+        }
+
+        FluidStack read(ItemStack stack) {
+            MethodHandle h = resolve();
+            if (h == null) return FluidStack.EMPTY;
+            try {
+                FluidStack fluid = (FluidStack) h.invoke(stack);
+                return fluid == null || fluid.isEmpty() ? FluidStack.EMPTY : fluid.copyWithAmount(1);
+            } catch (Throwable t) {
+                return FluidStack.EMPTY;
+            }
+        }
+
+        @Nullable
+        private MethodHandle resolve() {
+            if (!resolved) {
+                try {
+                    handle = MethodHandles.publicLookup().findStatic(Class.forName(className), methodName,
+                        MethodType.methodType(FluidStack.class, ItemStack.class));
+                } catch (ReflectiveOperationException | LinkageError ignored) {
+                    handle = null;   // addon API changed: its virtual fluids are treated as unlabelable
+                }
+                resolved = true;
+            }
+            return handle;
+        }
     }
 }

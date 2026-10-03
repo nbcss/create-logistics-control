@@ -4,7 +4,6 @@ import com.simibubi.create.content.logistics.BigItemStack;
 import com.simibubi.create.content.logistics.stockTicker.CraftableBigItemStack;
 import com.simibubi.create.content.logistics.stockTicker.PackageOrder;
 import com.simibubi.create.content.logistics.stockTicker.PackageOrderWithCrafts;
-import io.github.nbcss.logisticscontrol.content.compat.fluids.FluidCompat;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.CraftingRecipe;
 import net.minecraft.world.item.crafting.Ingredient;
@@ -14,7 +13,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * carries each JEI recipe's output as its package filter, by appending sentinel data to the order.
+ * Carries each JEI recipe's output as its package filter, by appending sentinel data to the order. A fluid output (an
+ * addon's virtual fluid item, e.g. a Basin mixing recipe) is carried like any other, as a {@code FilterManifestItem}.
  */
 public final class RecipeFilterEncode {
     private RecipeFilterEncode() {}
@@ -27,13 +27,13 @@ public final class RecipeFilterEncode {
         List<ItemStack> nonCraftOutputs = new ArrayList<>();
         for (CraftableBigItemStack cbis : recipesToOrder) {
             if (cbis.recipe == null || cbis.recipe instanceof CraftingRecipe) continue;
-            if (cbis.stack == null || cbis.stack.isEmpty() || FluidCompat.isFluidFilter(cbis.stack)) continue;
+            if (cbis.stack == null || cbis.stack.isEmpty()) continue;
             List<BigItemStack> pattern = resolvePattern(cbis, itemsToOrder);
             if (pattern.stream().allMatch(b -> b.stack.isEmpty())) continue;
             int outputCount = Math.max(1, cbis.getOutputCount(level));
             int count = Math.max(1, cbis.count / outputCount);
             crafts.add(new PackageOrderWithCrafts.CraftingEntry(new PackageOrder(pattern), count));
-            nonCraftOutputs.add(label(cbis.stack));
+            nonCraftOutputs.add(PackageFilter.normalize(cbis.stack));
         }
         if (nonCraftOutputs.isEmpty() && craftOutputs.isEmpty()) return order;
         PackageOrderWithCrafts result = new PackageOrderWithCrafts(order.orderedStacks(), crafts);
@@ -62,7 +62,7 @@ public final class RecipeFilterEncode {
             }
             current = match;
             remaining[match] -= entry.count();
-            outputs.add(label(crafting.get(match).stack));
+            outputs.add(PackageFilter.normalize(crafting.get(match).stack));
         }
         return outputs;
     }
@@ -74,11 +74,6 @@ public final class RecipeFilterEncode {
                 && RecipeFilters.matches((CraftingRecipe) crafting.get(k).recipe, entry.pattern().stacks(), level))
                 return k;
         return -1;
-    }
-
-    private static ItemStack label(ItemStack output) {
-        return output == null || output.isEmpty() || FluidCompat.isFluidFilter(output) || !PackageFilter.canLabel(output)
-            ? ItemStack.EMPTY : output.copyWithCount(1);
     }
 
     /** Rebuild a recipe's ingredient pattern, preferring the exact item variant the player already put in the order. */

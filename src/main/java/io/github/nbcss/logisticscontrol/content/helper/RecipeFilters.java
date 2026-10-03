@@ -2,7 +2,6 @@ package io.github.nbcss.logisticscontrol.content.helper;
 
 import com.simibubi.create.AllRecipeTypes;
 import com.simibubi.create.content.logistics.BigItemStack;
-import io.github.nbcss.logisticscontrol.content.compat.fluids.FluidCompat;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.CraftingInput;
@@ -24,7 +23,7 @@ public final class RecipeFilters {
             .map(h -> h.value().assemble(input, registries)).orElse(ItemStack.EMPTY);
         if (result.isEmpty())
             result = AllRecipeTypes.MECHANICAL_CRAFTING.find(input, level).map(h -> h.value().assemble(input, registries)).orElse(ItemStack.EMPTY);
-        return FluidCompat.isFluidFilter(result) || !PackageFilter.canLabel(result) ? ItemStack.EMPTY : result;
+        return PackageFilter.normalize(result);
     }
 
     /** Whether a crafting {@code pattern} (the 3x3 grid Create's order code builds) satisfies {@code recipe}. */

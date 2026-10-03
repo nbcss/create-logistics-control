@@ -13,8 +13,7 @@ public final class LogisticsControlApi {
 
     /**
      * Begin stamping {@code filter} onto every package created on this thread. MUST be paired with {@link #endDispatch()}
-     * in a {@code finally}. Use when the dispatching code can't be a lambda (e.g. it has method-exiting {@code return}s).
-     * A filter this mod rejects (e.g. a fluid represented as a virtual item) is treated as no filter.
+     * in a {@code finally}. Use when the dispatching code can't be a lambda function.
      */
     public static void beginDispatch(ItemStack filter) {
         FilterDispatch.set(filter);

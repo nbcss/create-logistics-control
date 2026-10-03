@@ -1,5 +1,7 @@
 package io.github.nbcss.logisticscontrol;
 
+import com.simibubi.create.foundation.item.render.SimpleCustomRenderer;
+import io.github.nbcss.logisticscontrol.content.client.FilterManifestRenderer;
 import io.github.nbcss.logisticscontrol.content.ponder.LogisticsControlPonderPlugin;
 import io.github.nbcss.logisticscontrol.content.client.FilterLinkRenderer;
 import net.createmod.ponder.foundation.PonderIndex;
@@ -9,6 +11,7 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
+import net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsEvent;
 
 @Mod(value = CreateLogisticsControl.MODID, dist = Dist.CLIENT)
 @EventBusSubscriber(modid = CreateLogisticsControl.MODID, value = Dist.CLIENT)
@@ -26,5 +29,12 @@ public class CreateLogisticsControlClient {
     @SubscribeEvent
     static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerBlockEntityRenderer(CreateLogisticsControl.FILTER_LINK_BE.get(), FilterLinkRenderer::new);
+    }
+
+    @SubscribeEvent
+    static void registerClientExtensions(RegisterClientExtensionsEvent event) {
+        event.registerItem(SimpleCustomRenderer.create(
+            CreateLogisticsControl.FILTER_MANIFEST_ITEM.get(), new FilterManifestRenderer()),
+            CreateLogisticsControl.FILTER_MANIFEST_ITEM.get());
     }
 }

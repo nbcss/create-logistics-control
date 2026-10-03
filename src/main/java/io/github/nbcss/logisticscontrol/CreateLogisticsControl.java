@@ -8,6 +8,7 @@ import io.github.nbcss.logisticscontrol.content.helper.CraftOutputs;
 import io.github.nbcss.logisticscontrol.content.helper.CrafterRecipeFilter;
 import io.github.nbcss.logisticscontrol.content.helper.NonCraftGroups;
 import io.github.nbcss.logisticscontrol.content.helper.PackageFilter;
+import io.github.nbcss.logisticscontrol.content.item.FilterManifestItem;
 import io.github.nbcss.logisticscontrol.content.item.FilterLinkBlockItem;
 import io.github.nbcss.logisticscontrol.content.packet.NetworkHandler;
 import net.minecraft.core.component.DataComponentType;
@@ -28,6 +29,7 @@ import net.neoforged.fml.config.ModConfig;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.common.conditions.ICondition;
 import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
+import net.neoforged.neoforge.fluids.SimpleFluidContent;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.registries.DeferredBlock;
 import net.neoforged.neoforge.registries.DeferredHolder;
@@ -55,6 +57,9 @@ public class CreateLogisticsControl {
     public static final DeferredItem<FilterLinkBlockItem> FILTER_LINK_ITEM =
         ITEMS.register("filter_link", () ->
             new FilterLinkBlockItem(FILTER_LINK.get(), new Item.Properties()));
+    public static final DeferredItem<FilterManifestItem> FILTER_MANIFEST_ITEM =
+        ITEMS.register("filter_manifest", () ->
+            new FilterManifestItem(new Item.Properties().stacksTo(1)));
 
     // ── Data Components ─────────────────────────────────────────────────────
     public static final DeferredRegister<DataComponentType<?>> DATA_COMPONENTS =
@@ -76,6 +81,12 @@ public class CreateLogisticsControl {
             DataComponentType.<CraftOutputs>builder()
                 .persistent(CraftOutputs.CODEC)
                 .networkSynchronized(CraftOutputs.STREAM_CODEC)
+                .build());
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<SimpleFluidContent>> FILTER_MANIFEST =
+        DATA_COMPONENTS.register("filter_manifest", () ->
+            DataComponentType.<SimpleFluidContent>builder()
+                .persistent(SimpleFluidContent.CODEC)
+                .networkSynchronized(SimpleFluidContent.STREAM_CODEC)
                 .build());
 
     // ── Block Entity Types ─────────────────────────────────────────────────

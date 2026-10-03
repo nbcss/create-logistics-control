@@ -1,7 +1,6 @@
 package io.github.nbcss.logisticscontrol.content.helper;
 
 import com.simibubi.create.content.logistics.BigItemStack;
-import io.github.nbcss.logisticscontrol.content.compat.fluids.FluidCompat;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.List;
@@ -13,10 +12,9 @@ public final class FilterDispatch {
 
     private FilterDispatch() {}
 
-    /** Unsupported virtual fluids and physical Create filter items never enter the package-label flow. */
+    /** Normalised on entry (see {@link PackageFilter#normalize}): virtual fluids become manifests, Create filters drop. */
     public static void set(ItemStack filter) {
-        CURRENT.set(filter == null || FluidCompat.isFluidFilter(filter) || !PackageFilter.canLabel(filter)
-            ? ItemStack.EMPTY : filter);
+        CURRENT.set(PackageFilter.normalize(filter));
     }
 
     public static ItemStack get() {

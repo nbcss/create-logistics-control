@@ -12,6 +12,7 @@
     "PackagerFilterMixin",
     "MechanicalCrafterFilterMixin",
     "FactoryPanelBehaviourMixin",
+    "FilterItemStackMixin",
     "FluidRepackagerFilterMixin",
     "FluidPackageStampMixin",
     "PhantomTickerOrderMixin",

@@ -13,9 +13,7 @@ import java.util.List;
  *  intended recipe (positionally) instead of first-matching an ambiguous ingredient pattern. */
 public record CraftOutputs(List<ItemStack> outputs) {
     public CraftOutputs {
-        outputs = outputs == null ? List.of() : outputs.stream()
-            .map(s -> s != null && PackageFilter.canLabel(s) ? s : ItemStack.EMPTY)
-            .toList();
+        outputs = outputs == null ? List.of() : outputs.stream().map(PackageFilter::normalize).toList();
     }
 
     public static final Codec<CraftOutputs> CODEC =

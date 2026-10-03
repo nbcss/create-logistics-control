@@ -2,7 +2,6 @@ package io.github.nbcss.logisticscontrol.content.helper;
 
 import com.mojang.serialization.Codec;
 import com.simibubi.create.content.logistics.BigItemStack;
-import io.github.nbcss.logisticscontrol.content.compat.fluids.FluidCompat;
 import net.createmod.catnip.codecs.stream.CatnipStreamCodecBuilders;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -25,9 +24,7 @@ public record NonCraftGroups(List<List<BigItemStack>> groups) {
                 if (group == null || group.isEmpty()) continue;
                 List<BigItemStack> copy = new ArrayList<>(group);
                 BigItemStack output = copy.getFirst();
-                if (output != null && FluidCompat.isFluidFilter(output.stack)) continue;
-                if (output == null || !PackageFilter.canLabel(output.stack))
-                    copy.set(0, new BigItemStack(ItemStack.EMPTY));
+                copy.set(0, new BigItemStack(output == null ? ItemStack.EMPTY : PackageFilter.normalize(output.stack)));
                 sanitized.add(copy);
             }
             groups = List.copyOf(sanitized);

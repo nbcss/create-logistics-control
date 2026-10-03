@@ -20,22 +20,6 @@ public final class FilterOrderCodec {
     private static final int NONCRAFT_OUTPUTS = 0;
     private static final int CRAFT_OUTPUTS = -1;
 
-    public static PackageOrderWithCrafts encode(PackageOrderWithCrafts order, ItemStack filter) {
-        if (filter == null || filter.isEmpty()) return order;
-        List<CraftingEntry> crafts = new ArrayList<>(order.orderedCrafts());
-        crafts.add(new CraftingEntry(new PackageOrder(List.of(new BigItemStack(filter.copyWithCount(1)))), NONCRAFT_OUTPUTS));
-        return new PackageOrderWithCrafts(order.orderedStacks(), crafts);
-    }
-
-    public static ItemStack decode(PackageOrderWithCrafts order) {
-        for (CraftingEntry e : order.orderedCrafts())
-            if (e.count() == NONCRAFT_OUTPUTS && !e.pattern().stacks().isEmpty()) {
-                ItemStack s = e.pattern().stacks().getFirst().stack;
-                if (!s.isEmpty()) return s;
-            }
-        return ItemStack.EMPTY;
-    }
-
     /** Carries the per-non-crafting-recipe output list as a single count-0 sentinel whose pattern holds the outputs. */
     public static PackageOrderWithCrafts encodeList(PackageOrderWithCrafts order, List<ItemStack> outputs) {
         return appendSentinel(order, outputs, NONCRAFT_OUTPUTS);
@@ -111,14 +95,6 @@ public final class FilterOrderCodec {
         int craftingCount = real.size() - nonCraftingCount;
         List<CraftingEntry> kept = new ArrayList<>();
         for (int i = 0; i < craftingCount && i < real.size(); i++) kept.add(real.get(i));
-        return new PackageOrderWithCrafts(order.orderedStacks(), kept);
-    }
-
-    public static PackageOrderWithCrafts strip(PackageOrderWithCrafts order) {
-        List<CraftingEntry> kept = new ArrayList<>();
-        for (CraftingEntry e : order.orderedCrafts())
-            if (e.count() > 0) kept.add(e);
-        if (kept.size() == order.orderedCrafts().size()) return order;
         return new PackageOrderWithCrafts(order.orderedStacks(), kept);
     }
 }
