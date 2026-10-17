@@ -25,6 +25,7 @@ public final class FluidCompat {
         return reader(stack) != null;
     }
 
+    /** The fluid an addon's virtual fluid item holds, with its real amount (e.g. a CFL tank's mB). */
     public static FluidStack virtualFluid(ItemStack stack) {
         Reader reader = reader(stack);
         return reader == null ? FluidStack.EMPTY : reader.read(stack);
@@ -52,7 +53,7 @@ public final class FluidCompat {
             if (h == null) return FluidStack.EMPTY;
             try {
                 FluidStack fluid = (FluidStack) h.invoke(stack);
-                return fluid == null || fluid.isEmpty() ? FluidStack.EMPTY : fluid.copyWithAmount(1);
+                return fluid == null || fluid.isEmpty() ? FluidStack.EMPTY : fluid.copy();
             } catch (Throwable t) {
                 return FluidStack.EMPTY;
             }

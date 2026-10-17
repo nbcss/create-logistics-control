@@ -10,14 +10,17 @@ import com.simibubi.create.content.logistics.packager.InventorySummary;
 import com.simibubi.create.content.logistics.packager.repackager.PackageRepackageHelper;
 import com.simibubi.create.content.logistics.stockTicker.PackageOrderWithCrafts;
 import io.github.nbcss.logisticscontrol.CreateLogisticsControl;
+import io.github.nbcss.logisticscontrol.content.compat.fluids.FluidCompat;
 import io.github.nbcss.logisticscontrol.content.helper.CraftOutputs;
 import io.github.nbcss.logisticscontrol.content.helper.NonCraftGroups;
 import io.github.nbcss.logisticscontrol.content.helper.PackageFilter;
 import io.github.nbcss.logisticscontrol.content.helper.RecipeFilters;
+import io.github.nbcss.logisticscontrol.content.item.FilterManifestItem;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.ItemStack;
+import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.items.ItemStackHandler;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 import org.spongepowered.asm.mixin.Mixin;
@@ -113,6 +116,20 @@ public abstract class FilterPackageRepackageMixin {
         for (int i = 1; i < group.size(); i++) {
             BigItemStack ing = group.get(i);
             if (ing.stack.isEmpty() || ing.count <= 0) continue;
+            FluidStack fluid = FilterManifestItem.fluid(ing.stack);
+            if (!fluid.isEmpty()) {
+                for (BigItemStack entry : new ArrayList<>(summary.getStacks())) {
+                    FluidStack held = FluidCompat.virtualFluid(entry.stack);
+                    if (held.isEmpty() || !FluidStack.isSameFluidSameComponents(held, fluid)) continue;
+                    while (ing.count > 0 && entry.count > 0) {
+                        summary.add(entry.stack, -1);
+                        flat.add(entry.stack.copyWithCount(1));
+                        ing.count -= Math.max(1, held.getAmount());
+                    }
+                    if (ing.count <= 0) break;
+                }
+                continue;
+            }
             int take = Math.min(ing.count, summary.getCountOf(ing.stack));
             if (take <= 0) continue;
             summary.add(ing.stack, -take);

@@ -63,8 +63,9 @@ public final class FilterOrderCodec {
         return List.of();
     }
 
-    /** Extracts the appended non-crafting entries (the last {@code outputs.size()} real entries) into consolidated
-     *  [output, ...ingredient totals] groups, summing each ingredient over the recipe's cells × its craft count. */
+    /** Extracts the appended non-crafting entries (the last {@code outputs.size()} real entries) into
+     *  [output, ...ingredient totals] groups. Each entry's cells already carry the recipe's totals (items, and fluid
+     *  manifests in mB), allocated on the client; the entry count is a placeholder. */
     public static List<List<BigItemStack>> extractGroups(PackageOrderWithCrafts order, List<ItemStack> outputs) {
         List<CraftingEntry> real = new ArrayList<>();
         for (CraftingEntry e : order.orderedCrafts()) if (e.count() > 0) real.add(e);
@@ -72,17 +73,11 @@ public final class FilterOrderCodec {
         List<List<BigItemStack>> groups = new ArrayList<>();
         if (craftingCount < 0) return groups;
         for (int j = 0; j < outputs.size(); j++) {
-            CraftingEntry e = real.get(craftingCount + j);
             List<BigItemStack> group = new ArrayList<>();
             group.add(new BigItemStack(outputs.get(j).copyWithCount(1), 1));
-            for (BigItemStack cell : e.pattern().stacks()) {
-                if (cell.stack.isEmpty()) continue;
-                BigItemStack existing = null;
-                for (int i = 1; i < group.size(); i++)
-                    if (ItemStack.isSameItemSameComponents(group.get(i).stack, cell.stack)) { existing = group.get(i); break; }
-                if (existing != null) existing.count += e.count();
-                else group.add(new BigItemStack(cell.stack.copyWithCount(1), e.count()));
-            }
+            for (BigItemStack cell : real.get(craftingCount + j).pattern().stacks())
+                if (!cell.stack.isEmpty() && cell.count > 0)
+                    group.add(new BigItemStack(cell.stack.copyWithCount(1), cell.count));
             groups.add(group);
         }
         return groups;

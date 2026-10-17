@@ -4,12 +4,18 @@ import com.simibubi.create.content.logistics.BigItemStack;
 import com.simibubi.create.content.logistics.stockTicker.CraftableBigItemStack;
 import com.simibubi.create.content.logistics.stockTicker.PackageOrder;
 import com.simibubi.create.content.logistics.stockTicker.PackageOrderWithCrafts;
+import com.simibubi.create.content.processing.recipe.ProcessingRecipe;
+import io.github.nbcss.logisticscontrol.content.compat.fluids.FluidCompat;
+import io.github.nbcss.logisticscontrol.content.item.FilterManifestItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.CraftingRecipe;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.Level;
+import net.neoforged.neoforge.fluids.FluidStack;
+import net.neoforged.neoforge.fluids.crafting.SizedFluidIngredient;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -25,14 +31,16 @@ public final class RecipeFilterEncode {
         List<ItemStack> craftOutputs = craftOutputsPerEntry(order.orderedCrafts(), recipesToOrder, level);
         List<PackageOrderWithCrafts.CraftingEntry> crafts = new ArrayList<>(order.orderedCrafts());
         List<ItemStack> nonCraftOutputs = new ArrayList<>();
+        List<BigItemStack> items = itemsToOrder == null ? List.of() : itemsToOrder;
+        List<BigItemStack> pool = remainingAfterCrafting(items, order.orderedCrafts());
         for (CraftableBigItemStack cbis : recipesToOrder) {
             if (cbis.recipe == null || cbis.recipe instanceof CraftingRecipe) continue;
             if (cbis.stack == null || cbis.stack.isEmpty()) continue;
-            List<BigItemStack> pattern = resolvePattern(cbis, itemsToOrder);
-            if (pattern.stream().allMatch(b -> b.stack.isEmpty())) continue;
-            int outputCount = Math.max(1, cbis.getOutputCount(level));
-            int count = Math.max(1, cbis.count / outputCount);
-            crafts.add(new PackageOrderWithCrafts.CraftingEntry(new PackageOrder(pattern), count));
+            int craftCount = Math.max(1, cbis.count / Math.max(1, cbis.getOutputCount(level)));
+            List<BigItemStack> totals = allocateIngredients(cbis, craftCount, pool, items);
+            if (totals.isEmpty()) continue;
+            // the cells carry this recipe's ingredient totals; the entry count is only a (> 0) placeholder
+            crafts.add(new PackageOrderWithCrafts.CraftingEntry(new PackageOrder(totals), 1));
             nonCraftOutputs.add(PackageFilter.normalize(cbis.stack));
         }
         if (nonCraftOutputs.isEmpty() && craftOutputs.isEmpty()) return order;
@@ -76,22 +84,83 @@ public final class RecipeFilterEncode {
         return -1;
     }
 
-    /** Rebuild a recipe's ingredient pattern, preferring the exact item variant the player already put in the order. */
-    private static List<BigItemStack> resolvePattern(CraftableBigItemStack cbis, List<BigItemStack> itemsToOrder) {
-        List<BigItemStack> pattern = new ArrayList<>();
-        List<BigItemStack> items = itemsToOrder == null ? List.of() : itemsToOrder;
-        for (Ingredient ing : cbis.recipe.getIngredients()) {
-            ItemStack chosen = ItemStack.EMPTY;
-            if (!ing.isEmpty()) {
-                for (BigItemStack b : items)
-                    if (!b.stack.isEmpty() && ing.test(b.stack)) { chosen = b.stack.copyWithCount(1); break; }
-                if (chosen.isEmpty()) {
-                    ItemStack[] itemArray = ing.getItems();
-                    if (itemArray.length > 0 && !itemArray[0].isEmpty()) chosen = itemArray[0].copyWithCount(1);
+    /**
+     * Count-aware copies of the ordered items, minus what Create's crafting entries consume (the re-packager splits
+     * those off first), so non-crafting recipes only claim stacks that are still there, the same way Create's own
+     * {@code sendIt} allocates crafting patterns from {@link BigItemStack#duplicateWrappers}.
+     */
+    private static List<BigItemStack> remainingAfterCrafting(List<BigItemStack> items,
+            List<PackageOrderWithCrafts.CraftingEntry> craftingEntries) {
+        List<BigItemStack> pool = BigItemStack.duplicateWrappers(items);
+        for (PackageOrderWithCrafts.CraftingEntry entry : craftingEntries)
+            for (BigItemStack cell : entry.pattern().stacks()) {
+                int need = cell.stack.isEmpty() ? 0 : entry.count();
+                for (BigItemStack b : pool) {
+                    if (need <= 0) break;
+                    if (b.count <= 0 || !ItemStack.isSameItemSameComponents(b.stack, cell.stack)) continue;
+                    int take = Math.min(need, b.count);
+                    b.count -= take;
+                    need -= take;
                 }
             }
-            pattern.add(new BigItemStack(chosen));
+        return pool;
+    }
+
+    /**
+     * The recipe's ingredient totals for {@code craftCount} crafts, drawn from {@code pool} (which is decremented), so
+     * overlapping ingredients and other recipes never claim the same stack twice. Ingredients with the fewest candidates
+     * draw first, so a narrow ingredient isn't starved by a broad one. Only what the order carries is claimed, since the
+     * re-packager can't bundle anything else. A processing recipe's fluid ingredients follow as manifest cells counting
+     * their total mB, so the re-packager bundles the recipe's fluid into the same box as its items.
+     */
+    private static List<BigItemStack> allocateIngredients(CraftableBigItemStack cbis, int craftCount,
+            List<BigItemStack> pool, List<BigItemStack> items) {
+        List<Ingredient> ingredients = new ArrayList<>(cbis.recipe.getIngredients());
+        ingredients.removeIf(Ingredient::isEmpty);
+        ingredients.sort(Comparator.comparingInt(ing -> candidates(ing, pool)));
+        List<BigItemStack> totals = new ArrayList<>();
+        for (Ingredient ing : ingredients) {
+            int need = craftCount;
+            for (BigItemStack b : pool) {
+                if (need <= 0) break;
+                if (b.count <= 0 || b.stack.isEmpty() || !ing.test(b.stack)) continue;
+                int take = Math.min(need, b.count);
+                b.count -= take;
+                need -= take;
+                addTotal(totals, b.stack, take);
+            }
         }
-        return pattern;
+        if (cbis.recipe instanceof ProcessingRecipe<?, ?> processing)
+            for (SizedFluidIngredient ing : processing.getFluidIngredients()) {
+                ItemStack manifest = FilterManifestItem.of(resolveFluid(ing, items));
+                if (!manifest.isEmpty()) totals.add(new BigItemStack(manifest, ing.amount() * craftCount));
+            }
+        return totals;
+    }
+
+    private static int candidates(Ingredient ing, List<BigItemStack> pool) {
+        int n = 0;
+        for (BigItemStack b : pool)
+            if (b.count > 0 && !b.stack.isEmpty() && ing.test(b.stack)) n++;
+        return n;
+    }
+
+    private static void addTotal(List<BigItemStack> totals, ItemStack stack, int count) {
+        for (BigItemStack t : totals)
+            if (ItemStack.isSameItemSameComponents(t.stack, stack)) {
+                t.count += count;
+                return;
+            }
+        totals.add(new BigItemStack(stack.copyWithCount(1), count));
+    }
+
+    /** The fluid the player already put in the order for {@code ing}, else the ingredient's first fluid. */
+    private static FluidStack resolveFluid(SizedFluidIngredient ing, List<BigItemStack> items) {
+        for (BigItemStack b : items) {
+            FluidStack fluid = FluidCompat.virtualFluid(b.stack);
+            if (!fluid.isEmpty() && ing.ingredient().test(fluid)) return fluid;
+        }
+        FluidStack[] fluids = ing.getFluids();
+        return fluids.length > 0 ? fluids[0] : FluidStack.EMPTY;
     }
 }
