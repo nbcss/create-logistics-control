@@ -15,7 +15,15 @@ what a package was actually requested to produce.
    every configured target - and clears it again when the package has none.
 
 Packages requested by a **Stock Keeper** with a JEI recipe, or by a **Factory Gauge**, carry their expected output as
-the filter label, so the Filter Link fills the target machines in automatically.
+the filter label, so the Filter Link fills the target machines in automatically. The portable tickers of
+**Create: Phantom** (1.0.3+) and **Create: Mobile Packages**, and **Deployer**'s Stock Keeper, work the same way.
+
+An order with several different recipes needs a **Re-Packager** on its route: it repacks the order one recipe per
+package, each labelled with that recipe's output. Items in such an order that belong to no recipe arrive in packages
+that leave the targets' filters as they are.
+
+With **Create: Fluid Logistics**, fluid outputs become fluid filter labels, and a recipe's fluid travels in the same
+package as its items.
 
 An in-game **Ponder** scene ("Using the Filter Link") walks through the whole setup.
 

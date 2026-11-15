@@ -1,6 +1,7 @@
 package io.github.nbcss.logisticscontrol.api;
 
-import io.github.nbcss.logisticscontrol.content.helper.FilterDispatch;
+import io.github.nbcss.logisticscontrol.filter.FilterPlan;
+import io.github.nbcss.logisticscontrol.order.PlanScope;
 import net.minecraft.world.item.ItemStack;
 
 /**
@@ -12,24 +13,19 @@ public final class LogisticsControlApi {
     private LogisticsControlApi() {}
 
     /**
-     * Begin stamping {@code filter} onto every package created on this thread. MUST be paired with {@link #endDispatch()}
-     * in a {@code finally}. Use when the dispatching code can't be a lambda function.
+     * Give {@code filter} to every package of the orders dispatched on this thread until {@link #endDispatch()}. MUST be
+     * paired with {@link #endDispatch()} in a {@code finally}. Use when the dispatching code can't be a lambda function.
      */
     public static void beginDispatch(ItemStack filter) {
-        FilterDispatch.set(filter);
+        PlanScope.push(FilterPlan.single(filter));
     }
 
     public static void endDispatch() {
-        FilterDispatch.clear();
+        PlanScope.pop();
     }
 
     /** Convenience form of {@link #beginDispatch}/{@link #endDispatch} for a self-contained dispatch. */
     public static void dispatchWithFilter(ItemStack filter, Runnable dispatch) {
-        beginDispatch(filter);
-        try {
-            dispatch.run();
-        } finally {
-            endDispatch();
-        }
+        PlanScope.run(FilterPlan.single(filter), dispatch);
     }
 }

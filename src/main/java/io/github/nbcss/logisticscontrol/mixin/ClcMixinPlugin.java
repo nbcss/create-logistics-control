@@ -1,7 +1,6 @@
 package io.github.nbcss.logisticscontrol.mixin;
 
 import net.neoforged.fml.loading.LoadingModList;
-import org.apache.maven.artifact.versioning.DefaultArtifactVersion;
 import org.objectweb.asm.tree.ClassNode;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
 import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
@@ -9,28 +8,13 @@ import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
 import java.util.List;
 import java.util.Set;
 
+/** Applies each addon's adapter mixins only when that addon is installed. */
 public class ClcMixinPlugin implements IMixinConfigPlugin {
 
-    private static final String DEPLOYER_ORDER_PACKET_MIXIN =
-        "io.github.nbcss.logisticscontrol.mixin.GenericOrderRequestPacketMixin";
-    private static final String FLUID_REPACKAGER_MIXIN =
-        "io.github.nbcss.logisticscontrol.mixin.FluidRepackagerFilterMixin";
-    private static final String FLUID_PACKAGE_STAMP_MIXIN =
-        "io.github.nbcss.logisticscontrol.mixin.FluidPackageStampMixin";
-    private static final String PHANTOM_ORDER_MIXIN =
-        "io.github.nbcss.logisticscontrol.mixin.PhantomTickerOrderMixin";
-    private static final String PHANTOM_FILTER_MIXIN =
-        "io.github.nbcss.logisticscontrol.mixin.PhantomTickerFilterMixin";
-    private static final String CMP_ORDER_MIXIN =
-        "io.github.nbcss.logisticscontrol.mixin.CmpTickerOrderMixin";
-    private static final String CMP_FILTER_MIXIN =
-        "io.github.nbcss.logisticscontrol.mixin.CmpTickerFilterMixin";
+    private static final String PACKAGE = "io.github.nbcss.logisticscontrol.mixin.";
 
-    private static final boolean DEPLOYER_PRESENT = isModPresent("deployer");
-    private static final boolean FLUIDLOGISTICS_PRESENT = isModPresent("fluidlogistics");
-    private static final boolean CREATEPHANTOM_PRESENT = isModPresent("createphantom");
-    // Phantom < 1.0.2 builds its order inline in sendIt (no `order` local for PhantomTickerFilterMixin to modify).
-    private static final boolean CREATEPHANTOM_1_0_2 = isModAtLeast("createphantom", "1.0.2");
+    private static final boolean CFA_PRESENT = isModPresent("create_factory_abstractions");
+    private static final boolean CFL_PRESENT = isModPresent("fluidlogistics");
     private static final boolean CMP_PRESENT = isModPresent("create_mobile_packages");
 
     private static boolean isModPresent(String modId) {
@@ -41,28 +25,11 @@ public class ClcMixinPlugin implements IMixinConfigPlugin {
         }
     }
 
-    private static boolean isModAtLeast(String modId, String minVersion) {
-        try {
-            var file = LoadingModList.get().getModFileById(modId);
-            if (file == null) return false;
-            for (var mod : file.getMods())
-                if (modId.equals(mod.getModId()))
-                    return mod.getVersion().compareTo(new DefaultArtifactVersion(minVersion)) >= 0;
-            return false;
-        } catch (Throwable t) {
-            return false;
-        }
-    }
-
     @Override
     public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
-        if (DEPLOYER_ORDER_PACKET_MIXIN.equals(mixinClassName)) return DEPLOYER_PRESENT;
-        if (FLUID_REPACKAGER_MIXIN.equals(mixinClassName)) return FLUIDLOGISTICS_PRESENT;
-        if (FLUID_PACKAGE_STAMP_MIXIN.equals(mixinClassName)) return FLUIDLOGISTICS_PRESENT;
-        if (PHANTOM_ORDER_MIXIN.equals(mixinClassName)) return CREATEPHANTOM_PRESENT;
-        if (PHANTOM_FILTER_MIXIN.equals(mixinClassName)) return CREATEPHANTOM_1_0_2;
-        if (CMP_ORDER_MIXIN.equals(mixinClassName)) return CMP_PRESENT;
-        if (CMP_FILTER_MIXIN.equals(mixinClassName)) return CMP_PRESENT;
+        if (mixinClassName.startsWith(PACKAGE + "cfa.")) return CFA_PRESENT;
+        if (mixinClassName.startsWith(PACKAGE + "cfl.")) return CFL_PRESENT;
+        if (mixinClassName.startsWith(PACKAGE + "cmp.")) return CMP_PRESENT && CFA_PRESENT;
         return true;
     }
 

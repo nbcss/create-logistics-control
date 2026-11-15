@@ -1,9 +1,9 @@
 package io.github.nbcss.logisticscontrol;
 
 import com.simibubi.create.foundation.item.render.SimpleCustomRenderer;
-import io.github.nbcss.logisticscontrol.content.client.FilterManifestRenderer;
-import io.github.nbcss.logisticscontrol.content.ponder.LogisticsControlPonderPlugin;
-import io.github.nbcss.logisticscontrol.content.client.FilterLinkRenderer;
+import io.github.nbcss.logisticscontrol.filter.fluid.FilterManifestRenderer;
+import io.github.nbcss.logisticscontrol.link.ponder.LogisticsControlPonderPlugin;
+import io.github.nbcss.logisticscontrol.link.client.FilterLinkRenderer;
 import net.createmod.ponder.foundation.PonderIndex;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;

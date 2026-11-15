@@ -2,15 +2,17 @@ package io.github.nbcss.logisticscontrol;
 
 import com.mojang.serialization.MapCodec;
 import com.simibubi.create.AllCreativeModeTabs;
-import io.github.nbcss.logisticscontrol.content.block.FilterLinkBlock;
-import io.github.nbcss.logisticscontrol.content.block.FilterLinkBlockEntity;
-import io.github.nbcss.logisticscontrol.content.helper.CraftOutputs;
-import io.github.nbcss.logisticscontrol.content.helper.CrafterRecipeFilter;
-import io.github.nbcss.logisticscontrol.content.helper.NonCraftGroups;
-import io.github.nbcss.logisticscontrol.content.helper.PackageFilter;
-import io.github.nbcss.logisticscontrol.content.item.FilterManifestItem;
-import io.github.nbcss.logisticscontrol.content.item.FilterLinkBlockItem;
-import io.github.nbcss.logisticscontrol.content.packet.NetworkHandler;
+import io.github.nbcss.logisticscontrol.crafter.CrafterRecipeFilter;
+import io.github.nbcss.logisticscontrol.filter.FilterPlan;
+import io.github.nbcss.logisticscontrol.filter.PackageFilter;
+import io.github.nbcss.logisticscontrol.filter.fluid.FilterManifestItem;
+import io.github.nbcss.logisticscontrol.filter.legacy.CraftOutputs;
+import io.github.nbcss.logisticscontrol.filter.legacy.NonCraftGroups;
+import io.github.nbcss.logisticscontrol.link.FilterLinkBlock;
+import io.github.nbcss.logisticscontrol.link.FilterLinkBlockEntity;
+import io.github.nbcss.logisticscontrol.link.FilterLinkBlockItem;
+import io.github.nbcss.logisticscontrol.order.Dispatch;
+import io.github.nbcss.logisticscontrol.order.PendingPlans;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
@@ -29,6 +31,8 @@ import net.neoforged.fml.config.ModConfig;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.common.conditions.ICondition;
 import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.fluids.SimpleFluidContent;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.registries.DeferredBlock;
@@ -62,6 +66,7 @@ public class CreateLogisticsControl {
             new FilterManifestItem(new Item.Properties().stacksTo(1)));
 
     // ── Data Components ─────────────────────────────────────────────────────
+    // Packages may sit in storage for years: never unregister one of these ids, and keep their data readable.
     public static final DeferredRegister<DataComponentType<?>> DATA_COMPONENTS =
         DeferredRegister.create(Registries.DATA_COMPONENT_TYPE, MODID);
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<PackageFilter>> PACKAGE_FILTER =
@@ -70,12 +75,20 @@ public class CreateLogisticsControl {
                 .persistent(PackageFilter.CODEC)
                 .networkSynchronized(PackageFilter.STREAM_CODEC)
                 .build());
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<FilterPlan>> FILTER_PLAN =
+        DATA_COMPONENTS.register("filter_plan", () ->
+            DataComponentType.<FilterPlan>builder()
+                .persistent(FilterPlan.CODEC)
+                .networkSynchronized(FilterPlan.STREAM_CODEC)
+                .build());
+    /** Read-only (0.1.x packages); see {@link io.github.nbcss.logisticscontrol.filter.legacy.LegacyPlans}. */
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<NonCraftGroups>> NONCRAFT_GROUPS =
         DATA_COMPONENTS.register("noncraft_groups", () ->
             DataComponentType.<NonCraftGroups>builder()
                 .persistent(NonCraftGroups.CODEC)
                 .networkSynchronized(NonCraftGroups.STREAM_CODEC)
                 .build());
+    /** Read-only (0.1.x packages); see {@link io.github.nbcss.logisticscontrol.filter.legacy.LegacyPlans}. */
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<CraftOutputs>> CRAFT_OUTPUTS =
         DATA_COMPONENTS.register("craft_outputs", () ->
             DataComponentType.<CraftOutputs>builder()
@@ -115,6 +128,10 @@ public class CreateLogisticsControl {
 
         // Pin the intended recipe on Mechanical Crafters fed by a Filter Link (game-bus event fired per block entity).
         NeoForge.EVENT_BUS.addListener(CrafterRecipeFilter::onAttachBehaviours);
+        // An order's plan is tied to its order ids only for the tick its packages are created in.
+        NeoForge.EVENT_BUS.addListener((ServerTickEvent.Post event) -> Dispatch.endTick());
+        NeoForge.EVENT_BUS.addListener((PlayerEvent.PlayerLoggedOutEvent event) ->
+            PendingPlans.forget(event.getEntity().getUUID()));
 
         modContainer.registerConfig(ModConfig.Type.SERVER, ServerConfig.SPEC);
     }

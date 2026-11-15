@@ -5,23 +5,22 @@
   "plugin": "io.github.nbcss.logisticscontrol.mixin.ClcMixinPlugin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
-    "FilterPackageRepackageMixin",
-    "PackageOrderRequestPacketMixin",
-    "GenericOrderRequestPacketMixin",
-    "PackagerBlockMixin",
-    "PackagerFilterMixin",
-    "MechanicalCrafterFilterMixin",
-    "FactoryPanelBehaviourMixin",
-    "FilterItemStackMixin",
-    "FluidRepackagerFilterMixin",
-    "FluidPackageStampMixin",
-    "PhantomTickerOrderMixin",
-    "CmpTickerOrderMixin"
+    "create.BlockEntityConfigurationPacketMixin",
+    "create.FactoryPanelBehaviourMixin",
+    "create.FilterItemStackMixin",
+    "create.LogisticsManagerMixin",
+    "create.MechanicalCrafterFilterMixin",
+    "create.PackageItemMixin",
+    "create.PackageRepackageHelperAccessor",
+    "create.PackagerBlockMixin",
+    "create.PackagerUnwrapMixin",
+    "create.RepackagerBlockEntityMixin",
+    "cfa.GenericLogisticsManagerMixin",
+    "cfl.FluidRepackagerUnwrapMixin"
   ],
   "client": [
-    "StockKeeperFilterMixin",
-    "PhantomTickerFilterMixin",
-    "CmpTickerFilterMixin"
+    "create.StockKeeperScreenMixin",
+    "cmp.CmpTickerScreenMixin"
   ],
   "refmap": "createlogisticscontrol.refmap.json"
 }

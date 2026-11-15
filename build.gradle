@@ -61,10 +61,26 @@ repositories {
         name = "BlameJared (JEI)"
         url = "https://maven.blamejared.com"
     }
+    maven {
+        name = "CurseMaven"
+        url = "https://cursemaven.com"
+        content {
+            includeGroup "curse.maven"
+        }
+    }
 }
 
 base {
     archivesName = mod_id
+}
+
+// cfl12: the one Create: Fluid Logistics call that differs by version and has no 1.3 equivalent (createCarrier, which
+// 1.3 removed), compiled against CFL 1.2.9 while main compiles against 1.3.2. It ships in the same jar as main;
+// CflBridge only calls into it when the installed CFL has createCarrier.
+sourceSets {
+    cfl12 {
+        java { srcDir 'src/cfl12/java' }
+    }
 }
 
 // Mojang ships Java 21 to end users in 1.21.1, so mods should target Java 21.
@@ -148,9 +164,12 @@ neoForge {
         // multi mod projects should define one per mod
         "${mod_id}" {
             sourceSet(sourceSets.main)
+            sourceSet(sourceSets.cfl12)
         }
     }
 }
+
+neoForge.addModdingDependenciesTo(sourceSets.cfl12)
 
 // Sets up a dependency configuration called 'localRuntime'.
 // This configuration should be used instead of 'runtimeOnly' to declare
@@ -186,13 +205,23 @@ dependencies {
     compileOnly "com.simibubi.create:create-1.21.1:${create_version}"
     localRuntime "com.simibubi.create:create-1.21.1:${create_version}"
 
-    // Deployer (soft): compile against it; put it on the standalone dev runtime so its integration is exercised.
-    // transitive = false to avoid Deployer's messy published dependency graph (create:slim / curse.maven).
-    compileOnly("net.liukrast:deployer-1.21.1:${deployer_version}") { transitive = false }
+    // Deployer (soft): no code of its own is needed (its orders go through Create's hooks); it is on the standalone dev
+    // runtime so that path is exercised. transitive = false to avoid Deployer's messy published dependency graph.
     localRuntime("net.liukrast:deployer-1.21.1:${deployer_version}") { transitive = false }
 
     // Create Factory Abstractions (soft): the generic order/stock layer of Create: Mobile Packages
     compileOnly("ru.zznty:create_factory_abstractions-1.21.1:${create_factory_abstractions_version}") { transitive = false }
+
+    // Create: Fluid Logistics (soft): main compiles against 1.3.2, the cfl12 source set against 1.2.9 (see above); which
+    // one is used is found at runtime (see CflApi). Not on the dev runtime: Factory Controller's runClient (CFL) is where
+    // it is exercised.
+    compileOnly("curse.maven:create-fluidlogistic-${fluid_logistics_curse_project}:${fluid_logistics_curse_file}") { transitive = false }
+    cfl12CompileOnly("curse.maven:create-fluidlogistic-${fluid_logistics_curse_project}:${fluid_logistics_12_curse_file}") { transitive = false }
+    compileOnly sourceSets.cfl12.output
+    localRuntime sourceSets.cfl12.output
+
+    // CreateFluid (soft): its fluid manifest is read as a fluid filter (see FluidLabels).
+    compileOnly("curse.maven:create-fluid-${create_fluid_curse_project}:${create_fluid_curse_file}") { transitive = false }
 
     // JEI (optional): compile against the API only; run the full mod on the standalone dev runtime for testing.
     compileOnly "mezz.jei:jei-1.21.1-neoforge-api:${jei_version}"
@@ -235,6 +264,10 @@ publishing {
             url = System.getenv("MAVEN_REPO_PATH")
         }
     }
+}
+
+tasks.named('jar', Jar) {
+    from sourceSets.cfl12.output
 }
 
 tasks.withType(JavaCompile).configureEach {
