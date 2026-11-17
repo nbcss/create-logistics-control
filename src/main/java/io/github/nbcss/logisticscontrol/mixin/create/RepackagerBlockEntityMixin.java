@@ -14,8 +14,8 @@ import org.spongepowered.asm.mixin.injection.At;
 import java.util.List;
 
 /**
- * Post-processes what the Re-Packager's helper produced for an order, whichever helper is installed (Create's, CFL's
- * {@code ResourceRepackageHelper}, Deployer's wrap of this same call). Nothing inside the helpers is hooked.
+ * Post-processes what the Re-Packager's helper produced for an order, however other mods change it (CFL's own helper up
+ * to 1.3.2 and its wrap of {@code repack} after, Deployer's wrap of this same call). Nothing inside the helpers is hooked.
  */
 @Mixin(value = RepackagerBlockEntity.class, remap = false)
 public abstract class RepackagerBlockEntityMixin {

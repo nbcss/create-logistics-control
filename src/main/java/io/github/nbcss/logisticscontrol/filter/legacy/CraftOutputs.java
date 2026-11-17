@@ -18,4 +18,22 @@ public record CraftOutputs(List<ItemStack> outputs) {
 
     public static final StreamCodec<RegistryFriendlyByteBuf, CraftOutputs> STREAM_CODEC =
         CatnipStreamCodecBuilders.list(ItemStack.OPTIONAL_STREAM_CODEC).map(CraftOutputs::new, CraftOutputs::outputs);
+
+    // By value, like 0.1.x: boxes of one order must compare (and hash) equal for a Re-Packager to merge them, and
+    // ItemStack has no equals of its own.
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof CraftOutputs other) || outputs.size() != other.outputs.size()) return false;
+        for (int i = 0; i < outputs.size(); i++)
+            if (!ItemStack.isSameItemSameComponents(outputs.get(i), other.outputs.get(i))) return false;
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        int h = 1;
+        for (ItemStack s : outputs) h = 31 * h + ItemStack.hashItemAndComponents(s);
+        return h;
+    }
 }
